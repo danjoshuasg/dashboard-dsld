@@ -1,0 +1,30 @@
+# Ignorar carpetas de entorno virtual
+venv/
+env/
+.env/
+dashboard-dsld/Include/
+dashboard-dsld/Lib/
+dashboard-dsld/Scripts/
+dashboard-dsld/bin/
+dashboard-dsld/lib/
+dashboard-dsld/share/
+
+# Archivos específicos de Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.env
+
+# Archivos específicos de Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Archivos de configuración del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos generados por VS Code
+.vscode/
+
+
+main.py
