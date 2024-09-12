@@ -37,7 +37,7 @@ navbar = html.Div([
         }),
         dbc.Nav([
             dbc.NavLink("Defensorías", href="/defensorias", active="exact"),
-            #dbc.NavLink("Responsables", href="/responsables", active="exact"),
+            dbc.NavLink("Responsables", href="/responsables", active="exact"),
             #dbc.NavLink("Supervisiones", href="/supervisiones", active="exact"),
             dbc.NavLink("Capacitaciones", href="/capacitaciones", active="exact"),
             #dbc.NavLink("CCONNA", href="/cconna", active="exact"),

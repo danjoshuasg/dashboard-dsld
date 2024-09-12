@@ -54,9 +54,9 @@ def display_page(pathname):
     if pathname == '/defensorias' or pathname == '/':
         return defensorias.get_layout()
     elif pathname == '/responsables':
-        return responsables.layout
+        return responsables.get_layout()
     elif pathname == '/supervisiones':
-        return supervisiones.layout
+        return supervisiones.get_layout()
     elif pathname == '/capacitaciones':
         return capacitaciones.get_layout()
     elif pathname == '/cconna':
