@@ -1,11 +1,11 @@
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from utils.data_loader import load_capacitaciones_data, load_defensorias_data
+
 
 def get_layout():
     layout = html.Div([
         html.Div([  # Contenedor principal
-            html.H1('Dashboard de Capacitaciones', className='mb-4'),
+            html.H1('Visualizador de datos de Capacitaciones', className='mb-4'),
             
             # Filtros en cascada
             dbc.Row([

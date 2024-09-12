@@ -1,6 +1,5 @@
 from dash import Input, Output, State, dash_table
 import plotly.express as px
-from utils.data_loader import load_defensorias_data, load_capacitaciones_data
 from app import app
 from utils.data_loader import run_query
 

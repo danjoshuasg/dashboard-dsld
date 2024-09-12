@@ -17,32 +17,3 @@ def run_query(query, params=None):
     with engine.connect() as connection:
         result = connection.execute(text(query), params)
         return pd.DataFrame(result.fetchall(), columns=result.keys())
-    
-def load_defensorias_data():
-    try:
-
-        # Leer los datos de la tabla dna
-        df = pd.read_sql_table('dna', engine)
-        
-        # Cerrar la conexión
-        engine.dispose()
-        
-        return df
-    except Exception as e:
-        print(f"Error al cargar los datos: {e}")
-        return pd.DataFrame()  # Devolver un DataFrame vacío en caso de error
-
-
-def load_capacitaciones_data():
-    try:
-        # Leer los datos de la tabla dna
-        df = pd.read_sql_table('capacitaciones', engine)
-        
-        # Cerrar la conexión
-        engine.dispose()
-        
-        return df
-    except Exception as e:
-        print(f"Error al cargar los datos: {e}")
-        return pd.DataFrame()  # Devolver un DataFrame vacío en caso de error
-
