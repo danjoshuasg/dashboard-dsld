@@ -28,7 +28,14 @@ def load_estados(search_value):
     """
     df = run_query(query)
     return [{'label': i, 'value': i} for i in df['estado']]
-
+@app.callback(
+    Output('estado-dna-dropdown', 'value'),
+    Input('estado-dna-dropdown', 'options')
+)
+def set_estado_default(available_options):
+    default_values = ['Acreditada', 'No acreditada', 'No operativa']
+    return [option['value'] for option in available_options if option['label'] in default_values]
+    
 # Callbacks para estados de DNA corregido
 @app.callback(
     Output('tipo-dna-dropdown', 'options'),
@@ -45,6 +52,14 @@ def load_tipos(search_value):
     df = run_query(query)
     return [{'label': i, 'value': i} for i in df['siglas']]
 
+
+@app.callback(
+    Output('tipo-dna-dropdown', 'value'),
+    Input('tipo-dna-dropdown', 'options')
+)
+def set_tipo_default(available_options):
+    default_values = ['Distrital', 'Provincial']
+    return [option['value'] for option in available_options if option['label'] in default_values]
 
 # Callbacks para actualizar los dropdowns
 @app.callback(Output('prov-dna-dropdown', 'options'),
@@ -67,8 +82,9 @@ def set_distritos_options(selected_prov, selected_dpto):
     return []
 
 @app.callback(
-    [Output('dna-por-ubicacion', 'figure'),
-     Output('dna-por-estado', 'figure')],
+    [Output('dna-por-ubicacion', 'figure'),        
+    Output('dna-por-estado', 'figure'),
+     Output('dna-por-tipo', 'figure')],
     [Input('dpto-dna-dropdown', 'value'),
      Input('prov-dna-dropdown', 'value'),
      Input('dist-dna-dropdown', 'value'),
@@ -80,48 +96,67 @@ def update_graphs(dpto, prov, dist, estados, tipos):
     query = "SELECT"
     params = {}
     
+    # Función para obtener el total
+    def get_total(where_clause, params):
+        total_query = f"""
+            SELECT COUNT(*) as total 
+            FROM dna d
+            JOIN estadodna e ON d.estado_acreditacion = e.codigo 
+            JOIN modelodna m ON d.modelo = m.codigo
+            {where_clause}
+        """
+        total_df = run_query(total_query, params)
+        return total_df['total'].iloc[0]
+    
     if dist:
         query += " d.\"dist\" as ubicacion,"
         where_clause = " WHERE d.\"dpto\" = :dpto AND d.\"prov\" = :prov AND d.\"dist\" = :dist"
         params = {'dpto': dpto, 'prov': prov, 'dist': dist}
-        title = f'Número de Defensorías en {dist}, {prov}, {dpto}'
     elif prov:
         query += " d.\"dist\" as ubicacion,"
         where_clause = " WHERE d.\"dpto\" = :dpto AND d.\"prov\" = :prov"
         params = {'dpto': dpto, 'prov': prov}
-        title = f'Número de Defensorías por Distrito en {prov}, {dpto}'
     elif dpto:
         query += " d.\"prov\" as ubicacion,"
         where_clause = " WHERE d.\"dpto\" = :dpto"
         params = {'dpto': dpto}
-        title = f'Número de Defensorías por Provincia en {dpto}'
     else:
         query += " d.\"dpto\" as ubicacion,"
         where_clause = ""
-        title = 'Número de Defensorías por Departamento'
-
-    # Construir la parte de la consulta con los JOINs y el WHERE
-    query += " e.\"estado\", m.\"siglas\", COUNT(*) as count FROM dna d JOIN estadodna e ON d.estado_acreditacion = e.codigo JOIN modelodna m ON d.modelo = m.codigo" + where_clause
 
     # Agregar filtros de estados si existen
     if estados:
         if where_clause:
-            query += " AND"
+            where_clause += " AND"
         else:
-            query += " WHERE"
-        query += " e.\"estado\" IN :estados"
+            where_clause += " WHERE"
+        where_clause += " e.\"estado\" IN :estados"
         params['estados'] = tuple(estados)
     
     # Agregar filtros de tipos si existen
     if tipos:
-        if 'WHERE' not in query:
-            query += " WHERE"
+        if 'WHERE' not in where_clause:
+            where_clause += " WHERE"
         else:
-            query += " AND"
-        query += " m.\"siglas\" IN :tipos"
+            where_clause += " AND"
+        where_clause += " m.\"siglas\" IN :tipos"
         params['tipos'] = tuple(tipos)
 
-    # Completar la consulta con el GROUP BY
+    # Obtener el total con todos los filtros aplicados
+    total = get_total(where_clause, params)
+
+    # Construir el título basado en los filtros aplicados
+    if dist:
+        title = f'Número de Defensorías en {dist}, {prov}, {dpto}: {total}'
+    elif prov:
+        title = f'Número de Defensorías por Distrito en {prov}, {dpto}: {total}'
+    elif dpto:
+        title = f'Número de Defensorías por Provincia en {dpto}: {total}'
+    else:
+        title = f'Número de Defensorías por Departamento: {total}'
+
+    # Completar la consulta principal
+    query += " e.\"estado\", m.\"siglas\", COUNT(*) as count FROM dna d JOIN estadodna e ON d.estado_acreditacion = e.codigo JOIN modelodna m ON d.modelo = m.codigo" + where_clause
     query += " GROUP BY ubicacion, e.\"estado\", m.\"siglas\""
 
     # Ejecutar la consulta
@@ -135,9 +170,94 @@ def update_graphs(dpto, prov, dist, estados, tipos):
     
     # Gráfico de defensorías por estado de acreditación
     fig_estado = px.pie(df, values='count', names='estado', 
-                        title='Distribución de Defensorías por Estado de Acreditación')
+                        title=f'Distribución de Defensorías por Estado de Acreditación (Total: {total})')
 
-    return fig_ubicacion, fig_estado
+    # Gráfico de defensorías por tipo de defensoría
+    fig_tipo = px.pie(df, values='count', names='siglas', 
+                        title=f'Distribución de Defensorías por Tipo de Defensoría (Total: {total})')
+    
+    return fig_ubicacion, fig_estado, fig_tipo
+@app.callback(
+    Output('acreditacion-por-fechas', 'figure'),
+    [Input('fecha-inicio', 'date'),
+     Input('fecha-fin', 'date'),
+     Input('dpto-dna-dropdown', 'value'),
+     Input('prov-dna-dropdown', 'value'),
+     Input('dist-dna-dropdown', 'value'),
+     Input('estado-dna-dropdown', 'value'),
+     Input('tipo-dna-dropdown', 'value')]
+)
+def update_timeline(fecha_inicio, fecha_fin, dpto, prov, dist, estados, tipos):
+    # Construir la consulta SQL base
+    query = """
+    SELECT d.f_acreditacion, COUNT(*) as count
+    FROM dna d
+    JOIN estadodna e ON d.estado_acreditacion = e.codigo
+    JOIN modelodna m ON d.modelo = m.codigo
+    WHERE d.f_acreditacion BETWEEN :fecha_inicio AND :fecha_fin
+    """
+    params = {'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin}
+    
+    # Agregar filtros de ubicación
+    if dist:
+        query += " AND d.dpto = :dpto AND d.prov = :prov AND d.dist = :dist"
+        params.update({'dpto': dpto, 'prov': prov, 'dist': dist})
+    elif prov:
+        query += " AND d.dpto = :dpto AND d.prov = :prov"
+        params.update({'dpto': dpto, 'prov': prov})
+    elif dpto:
+        query += " AND d.dpto = :dpto"
+        params.update({'dpto': dpto})
+    
+    # Agregar filtros de estados si existen
+    if estados:
+        query += " AND e.estado IN :estados"
+        params['estados'] = tuple(estados)
+    
+    # Agregar filtros de tipos si existen
+    if tipos:
+        query += " AND m.siglas IN :tipos"
+        params['tipos'] = tuple(tipos)
+    
+    # Agrupar por fecha de acreditación
+    query += " GROUP BY d.f_acreditacion ORDER BY d.f_acreditacion"
+    
+    # Ejecutar la consulta
+    df = run_query(query, params)
+    
+    # Convertir la columna de fecha a datetime
+    df['f_acreditacion'] = pd.to_datetime(df['f_acreditacion'])
+    
+    # Ordenar el DataFrame por fecha
+    df = df.sort_values('f_acreditacion')
+    
+    # Calcular la frecuencia acumulada
+    df['cumulative_count'] = df['count'].cumsum()
+    
+    # Asegurar que tenemos una fila para cada día en el rango de fechas
+    date_range = pd.date_range(start=fecha_inicio, end=fecha_fin)
+    df_full = pd.DataFrame({'f_acreditacion': date_range})
+    df = pd.merge(df_full, df, on='f_acreditacion', how='left')
+    df['cumulative_count'] = df['cumulative_count'].fillna(method='ffill').fillna(0)
+    
+    # Crear el gráfico de línea con frecuencia acumulada
+    fig = px.line(df, x='f_acreditacion', y='cumulative_count', 
+                  title='Número Acumulado de Defensorías Acreditadas por Fecha',
+                  labels={'f_acreditacion': 'Fecha de Acreditación', 'cumulative_count': 'Número Acumulado de Defensorías'})
+    
+    # Personalizar el diseño del gráfico
+    fig.update_layout(
+        xaxis_title='Fecha de Acreditación',
+        yaxis_title='Número Acumulado de Defensorías',
+        hovermode='x unified'
+    )
+    
+    # Personalizar el formato de la información sobre la marcha (hover)
+    fig.update_traces(
+        hovertemplate='<b>Fecha</b>: %{x|%Y-%m-%d}<br><b>Total Acumulado</b>: %{y}<extra></extra>'
+    )
+    
+    return fig
 
 
 

@@ -12,7 +12,7 @@ app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     navbar,
     html.Div(id='page-content', style={
-        'marginLeft': '50px',
+        'marginLeft': '250px',
         'padding': '20px',
         'paddingTop': '40px',
         'transition': 'margin-left 0.3s ease-in-out'
@@ -35,12 +35,12 @@ def toggle_navbar(n_clicks, navbar_style, content_style, toggle_style):
     if navbar_style['transform'] == 'translateX(0)':
         # Ocultar navbar
         navbar_style['transform'] = 'translateX(-250px)'
-        content_style['marginLeft'] = '-200px'
+        content_style['marginLeft'] = '50px'
         toggle_style['left'] = '10px'
     else:
         # Mostrar navbar
         navbar_style['transform'] = 'translateX(0)'
-        content_style['marginLeft'] = '50px'
+        content_style['marginLeft'] = '250px'
         toggle_style['left'] = '210px'
 
     # Añadir transición al estilo del botón
