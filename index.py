@@ -35,7 +35,7 @@ def toggle_navbar(n_clicks, navbar_style, content_style, toggle_style):
     if navbar_style['transform'] == 'translateX(0)':
         # Ocultar navbar
         navbar_style['transform'] = 'translateX(-250px)'
-        content_style['marginLeft'] = '-150px'
+        content_style['marginLeft'] = '-200px'
         toggle_style['left'] = '10px'
     else:
         # Mostrar navbar
