@@ -170,11 +170,11 @@ def update_graphs(dpto, prov, dist, estados, tipos):
     
     # Gráfico de defensorías por estado de acreditación
     fig_estado = px.pie(df, values='count', names='estado', 
-                        title=f'Distribución de Defensorías por Estado de Acreditación (Total: {total})')
+                        title=f'Distribución de Defensorías por Estado de Acreditación')
 
     # Gráfico de defensorías por tipo de defensoría
     fig_tipo = px.pie(df, values='count', names='siglas', 
-                        title=f'Distribución de Defensorías por Tipo de Defensoría (Total: {total})')
+                        title=f'Distribución de Defensorías por Tipo de Defensoría')
     
     return fig_ubicacion, fig_estado, fig_tipo
 @app.callback(
@@ -238,7 +238,7 @@ def update_timeline(fecha_inicio, fecha_fin, dpto, prov, dist, estados, tipos):
     date_range = pd.date_range(start=fecha_inicio, end=fecha_fin)
     df_full = pd.DataFrame({'f_acreditacion': date_range})
     df = pd.merge(df_full, df, on='f_acreditacion', how='left')
-    df['cumulative_count'] = df['cumulative_count'].fillna(method='ffill').fillna(0)
+    df['cumulative_count'] = df['cumulative_count'].ffill().fillna(0)
     
     # Crear el gráfico de línea con frecuencia acumulada
     fig = px.line(df, x='f_acreditacion', y='cumulative_count', 

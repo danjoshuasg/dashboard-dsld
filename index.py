@@ -2,11 +2,14 @@ import os
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback_context
 from app import app, server
-from layouts import defensorias, responsables, supervisiones, capacitaciones,cconna, modo_ninez
+from layouts import defensores, defensorias, supervisiones, capacitaciones, cconna, modo_ninez
 from components.navbar import navbar
 import callbacks.defensorias_callbacks 
 import callbacks.capacitaciones_callbacks
 
+# Definir colores
+TEXT_COLOR = "#F0F0F0"
+ACCENT_COLOR = "#421e1b"
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -18,7 +21,6 @@ app.layout = html.Div([
         'transition': 'margin-left 0.3s ease-in-out'
     })
 ])
-
 
 @app.callback(
     [Output('navbar-content', 'style'),
@@ -37,14 +39,16 @@ def toggle_navbar(n_clicks, navbar_style, content_style, toggle_style):
         navbar_style['transform'] = 'translateX(-250px)'
         content_style['marginLeft'] = '50px'
         toggle_style['left'] = '10px'
+        toggle_style['color'] = ACCENT_COLOR  # Cambiar color cuando está oculto
     else:
         # Mostrar navbar
         navbar_style['transform'] = 'translateX(0)'
         content_style['marginLeft'] = '250px'
         toggle_style['left'] = '210px'
+        toggle_style['color'] = TEXT_COLOR  # Restaurar color original
 
     # Añadir transición al estilo del botón
-    toggle_style['transition'] = 'left 0.3s ease-in-out'
+    toggle_style['transition'] = 'left 0.3s ease-in-out, color 0.3s ease-in-out'
 
     return navbar_style, content_style, toggle_style
 
@@ -53,8 +57,8 @@ def toggle_navbar(n_clicks, navbar_style, content_style, toggle_style):
 def display_page(pathname):
     if pathname == '/defensorias' or pathname == '/':
         return defensorias.get_layout()
-    elif pathname == '/responsables':
-        return responsables.get_layout()
+    elif pathname == '/defensores':
+        return defensores.get_layout()
     elif pathname == '/supervisiones':
         return supervisiones.get_layout()
     elif pathname == '/capacitaciones':
