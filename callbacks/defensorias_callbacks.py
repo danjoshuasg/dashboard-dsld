@@ -5,6 +5,8 @@ from app import app  # Importar la instancia de la aplicación desde app.py
 from utils.data_loader import run_query
 from sqlalchemy import text
 
+colores_seaborn = px.colors.qualitative.Set2
+
 # Callbacks para cargar opciones iniciales
 @app.callback(Output('dpto-dna-dropdown', 'options'),
               Input('dpto-dna-dropdown', 'search_value'))
@@ -28,6 +30,8 @@ def load_estados(search_value):
     """
     df = run_query(query)
     return [{'label': i, 'value': i} for i in df['estado']]
+
+# Valores por defecto de los estados de DNA
 @app.callback(
     Output('estado-dna-dropdown', 'value'),
     Input('estado-dna-dropdown', 'options')
@@ -36,7 +40,7 @@ def set_estado_default(available_options):
     default_values = ['Acreditada', 'No acreditada', 'No operativa']
     return [option['value'] for option in available_options if option['label'] in default_values]
     
-# Callbacks para estados de DNA corregido
+# Callbacks para tipos de DNA
 @app.callback(
     Output('tipo-dna-dropdown', 'options'),
     Input('tipo-dna-dropdown', 'search_value')
@@ -52,7 +56,7 @@ def load_tipos(search_value):
     df = run_query(query)
     return [{'label': i, 'value': i} for i in df['siglas']]
 
-
+# Valores por defecto de los tipos de DNA
 @app.callback(
     Output('tipo-dna-dropdown', 'value'),
     Input('tipo-dna-dropdown', 'options')
@@ -60,6 +64,7 @@ def load_tipos(search_value):
 def set_tipo_default(available_options):
     default_values = ['Distrital', 'Provincial']
     return [option['value'] for option in available_options if option['label'] in default_values]
+
 
 # Callbacks para actualizar los dropdowns
 @app.callback(Output('prov-dna-dropdown', 'options'),
@@ -164,19 +169,35 @@ def update_graphs(dpto, prov, dist, estados, tipos):
 
     # Gráfico de defensorías por ubicación
     fig_ubicacion = px.bar(df.groupby('ubicacion').sum().reset_index(), 
-                           x='ubicacion', y='count',
-                           title=title,
-                           labels={'ubicacion': 'Ubicación', 'count': 'Número de Defensorías'})
-    
+                        x='ubicacion', y='count',
+                        title=title,
+                        labels={'ubicacion': 'Ubicación', 'count': 'Número de Defensorías'},
+                        color_discrete_sequence=colores_seaborn)
+
     # Gráfico de defensorías por estado de acreditación
     fig_estado = px.pie(df, values='count', names='estado', 
-                        title=f'Distribución de Defensorías por Estado de Acreditación')
+                        title=f'Distribución de Defensorías por Estado de Acreditación',
+                        color_discrete_sequence=colores_seaborn)
 
     # Gráfico de defensorías por tipo de defensoría
     fig_tipo = px.pie(df, values='count', names='siglas', 
-                        title=f'Distribución de Defensorías por Tipo de Defensoría')
-    
+                    title=f'Distribución de Defensorías por Tipo de Defensoría',
+                    color_discrete_sequence=colores_seaborn)
+
+    # Personalización adicional para mejorar la apariencia
+    for fig in [fig_ubicacion, fig_estado, fig_tipo]:
+        fig.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font=dict(family="Arial", size=12),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+    # Para el gráfico de barras, añadimos algunas personalizaciones específicas
+    fig_ubicacion.update_xaxes(tickangle=-45)
+    fig_ubicacion.update_yaxes(gridcolor='lightgray')
+
     return fig_ubicacion, fig_estado, fig_tipo
+
 @app.callback(
     Output('acreditacion-por-fechas', 'figure'),
     [Input('fecha-inicio', 'date'),
@@ -244,14 +265,30 @@ def update_timeline(fecha_inicio, fecha_fin, dpto, prov, dist, estados, tipos):
     fig = px.line(df, x='f_acreditacion', y='cumulative_count', 
                   title='Número Acumulado de Defensorías Acreditadas por Fecha',
                   labels={'f_acreditacion': 'Fecha de Acreditación', 'cumulative_count': 'Número Acumulado de Defensorías'})
+
+    # Actualizar el trazo de la línea
+    fig.update_traces(line=dict(color=colores_seaborn[0], width=2))
     
     # Personalizar el diseño del gráfico
     fig.update_layout(
         xaxis_title='Fecha de Acreditación',
         yaxis_title='Número Acumulado de Defensorías',
-        hovermode='x unified'
+        hovermode='x unified',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font=dict(family="Arial", size=12),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor='lightgray',
+            tickformat='%Y-%m-%d'
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='lightgray'
+        ),
+        title=dict(font=dict(size=16))
     )
-    
+
     # Personalizar el formato de la información sobre la marcha (hover)
     fig.update_traces(
         hovertemplate='<b>Fecha</b>: %{x|%Y-%m-%d}<br><b>Total Acumulado</b>: %{y}<extra></extra>'

@@ -6,6 +6,8 @@ from layouts import defensores, defensorias, supervisiones, capacitaciones, ccon
 from components.navbar import navbar
 import callbacks.defensorias_callbacks 
 import callbacks.capacitaciones_callbacks
+import callbacks.defensores_callbacks
+import callbacks.cconna_callbacks
 
 # Definir colores
 TEXT_COLOR = "#F0F0F0"

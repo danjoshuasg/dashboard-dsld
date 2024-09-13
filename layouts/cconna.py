@@ -5,55 +5,67 @@ import pandas as pd
 def get_layout():
     layout = html.Div([
         dbc.Container([
-            html.H1('Visualizador de Datos de Capacitaciones', className='text-center my-4 display-4'),
+            html.H1('Visualizador de datos del CCONNA)', className='text-center my-4 display-4'),
             
             dbc.Card([
                 dbc.CardBody([
                     html.H2('Filtros de Búsqueda', className='card-title mb-3'),
                     dbc.Row([
                         dbc.Col([
-                            html.Label('Departamento:', className='fw-bold'),
-                            dcc.Dropdown(id='dpto-capacitaciones-dropdown', className='mb-2'),
+                            html.Label('Región:', className='fw-bold'),
+                            dcc.Dropdown(id='region-cconna-dropdown', className='mb-2'),
                         ], md=4),
                         dbc.Col([
                             html.Label('Provincia:', className='fw-bold'),
-                            dcc.Dropdown(id='prov-capacitaciones-dropdown', className='mb-2'),
+                            dcc.Dropdown(id='provincia-cconna-dropdown', className='mb-2'),
                         ], md=4),
                         dbc.Col([
                             html.Label('Distrito:', className='fw-bold'),
-                            dcc.Dropdown(id='dist-capacitaciones-dropdown', className='mb-2'),
-                        ], md=4),   
+                            dcc.Dropdown(id='distrito-cconna-dropdown', className='mb-2'),
+                        ], md=4),
                     ], className='mb-3'),
-                    
                     dbc.Row([
                         dbc.Col([
-                            html.Label('Curso:', className='fw-bold'),
-                            dcc.Dropdown(id='curso-capacitaciones-dropdown', multi=True, className='mb-2'),
-                        ], md=12),
+                            html.Label('Tipo de CCONNA:', className='fw-bold'),
+                            dcc.Dropdown(id='tipo-cconna-dropdown', className='mb-2'),
+                        ], md=4),
+                        dbc.Col([
+                            html.Label('Estado:', className='fw-bold'),
+                            dcc.Dropdown(id='estado-cconna-dropdown', className='mb-2'),
+                        ], md=4),
                     ], className='mb-3'),
-                    
+                ])
+            ], className='mb-4 shadow'),
+            
+            dbc.Card([
+                dbc.CardBody([
+                    html.H2('Resumen de CCONNA', className='card-title mb-3'),
                     dbc.Row([
-                        dbc.Col(dcc.Graph(id='capacitaciones-por-ubicacion'), width=12, className='mb-3'),
+                        dbc.Col(dcc.Graph(id='cconna-por-region'), md=6, className='mb-3'),
+                        dbc.Col(dcc.Graph(id='cconna-por-tipo'), md=6, className='mb-3'),
                     ]),
-                    
                     dbc.Row([
-                        dbc.Col(dcc.Graph(id='capacitaciones-por-curso'), width=12, className='mb-3'),
+                        dbc.Col(dcc.Graph(id='cconna-por-estado'), md=6, className='mb-3'),
+                        dbc.Col(dcc.Graph(id='cconna-timeline'), md=6, className='mb-3'),
                     ]),
                 ])
             ], className='mb-4 shadow'),
             
             dbc.Card([
                 dbc.CardBody([
-                    html.H2('Resultados de Capacitaciones', className='card-title mb-3'),
+                    html.H2('Detalle de CCONNA', className='card-title mb-3'),
                     dash_table.DataTable(
-                        id='tabla-capacitaciones',
+                        id='tabla-cconna',
                         columns=[
-                            {"name": "Curso", "id": "curso"},
-                            {"name": "Fecha", "id": "fecha"},
-                            {"name": "Departamento", "id": "departamento"},
-                            {"name": "Provincia", "id": "provincia"},
-                            {"name": "Distrito", "id": "distrito"},
-                            {"name": "Participantes", "id": "participantes"},
+                            {"name": "Registro", "id": "REGISTRO"},
+                            {"name": "Región", "id": "Región"},
+                            {"name": "Provincia", "id": "Provincia"},
+                            {"name": "Distrito", "id": "Distrito"},
+                            {"name": "Tipo de CCONNA", "id": "Tipo de CCONNA"},
+                            {"name": "Nombre del CCONNA", "id": "Nombre del CCONNA"},
+                            {"name": "Fecha de inicio", "id": "Fecha de inicio del CCONNA"},
+                            {"name": "Fecha de término", "id": "Fecha de termino del CCONNA"},
+                            {"name": "Estado", "id": "ESTADO"},
                         ],
                         page_current=0,
                         page_size=10,
@@ -61,60 +73,27 @@ def get_layout():
                         style_table={'overflowX': 'auto'},
                         style_cell={
                             'height': 'auto',
-                            'minWidth': '100px', 'width': '100px', 'maxWidth': '100px',
+                            'minWidth': '100px', 'width': '100px', 'maxWidth': '150px',
                             'whiteSpace': 'normal'
                         },
                     ),
-                    dbc.Pagination(id='pagination-capacitaciones', max_value=10, fully_expanded=False, className='mt-3'),
+                    dbc.Pagination(id='pagination-cconna', max_value=10, fully_expanded=False, className='mt-3'),
                 ])
             ], className='mb-4 shadow'),
             
             dbc.Card([
                 dbc.CardBody([
-                    html.H2('Evolución Histórica de Capacitaciones', className='card-title mb-3'),
-                    dbc.Row([
-                        dbc.Col([
-                            html.Label('Fecha de inicio:', className='fw-bold'),
-                            dcc.DatePickerSingle(
-                                id='fecha-inicio',
-                                min_date_allowed=pd.to_datetime('2000-01-01'),
-                                max_date_allowed=pd.to_datetime('2030-12-31'),
-                                initial_visible_month=pd.to_datetime('2023-01-01'),
-                                date=pd.to_datetime('2023-01-01'),
-                                className='mb-2'
-                            ),
-                        ], md=3),
-                        dbc.Col([
-                            html.Label('Fecha de fin:', className='fw-bold'),
-                            dcc.DatePickerSingle(
-                                id='fecha-fin',
-                                min_date_allowed=pd.to_datetime('2000-01-01'),
-                                max_date_allowed=pd.to_datetime('2030-12-31'),
-                                initial_visible_month=pd.to_datetime('2024-12-31'),
-                                date=pd.to_datetime('2024-12-31'),
-                                className='mb-2'
-                            ),
-                        ], md=3),
-                    ], className='mb-3'),
-                    dbc.Row([
-                        dbc.Col(dcc.Graph(id='capacitaciones-por-fechas'), width=12),
-                    ]),
-                ])
-            ], className='mb-4 shadow'),
-
-            dbc.Card([
-                dbc.CardBody([
-                    html.H2('Búsqueda por DNI', className='card-title mb-3'),
+                    html.H2('Información Detallada del CCONNA', className='card-title mb-3'),
                     dbc.Row([
                         dbc.Col([
                             dbc.InputGroup([
-                                dbc.Input(id='dni-input', type='text', placeholder='Ingrese DNI (8 dígitos)'),
-                                dbc.Button('Buscar', id='buscar-btn', color='primary'),
+                                dbc.Input(id='cconna-input', type='text', placeholder='Ingrese Registro o Nombre del CCONNA'),
+                                dbc.Button('Buscar', id='buscar-cconna-btn', color='primary'),
                             ], className='mb-2'),
                         ], md=6),
                     ]),
-                    html.Div(id='dni-error-message', className='text-danger mb-2'),
-                    html.Div(id='dni-results', className='mt-2'),
+                    html.Div(id='cconna-error-message', className='text-danger mb-2'),
+                    html.Div(id='cconna-results', className='mt-2'),
                 ])
             ], className='mb-4 shadow'),
         ], fluid=True)

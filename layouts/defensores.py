@@ -76,7 +76,7 @@ def get_layout():
             
             dbc.Card([
                 dbc.CardBody([
-                    html.H2('Evolución Histórica de Nombramientos', className='card-title mb-3'),
+                    html.H2('Evolución Histórica Acumulada de Nombramientos', className='card-title mb-3'),
                     dbc.Row([
                         dbc.Col([
                             html.Label('Fecha de inicio:', className='fw-bold'),
@@ -102,7 +102,7 @@ def get_layout():
                         ], md=3),
                     ], className='mb-3'),
                     dbc.Row([
-                        dbc.Col(dcc.Graph(id='nombramientos-por-fechas'), width=12),
+                        dbc.Col(dcc.Graph(id='nombramientos-acumulados'), width=12),
                     ]),
                 ])
             ], className='mb-4 shadow'),
