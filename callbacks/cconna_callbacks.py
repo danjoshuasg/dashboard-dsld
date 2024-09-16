@@ -4,214 +4,133 @@ import pandas as pd
 import dash_bootstrap_components as dbc
 from app import app  # Importar la instancia de la aplicación desde app.py
 from utils.data_loader import run_query
+from datetime import datetime
 import math
 
 colores_seaborn = px.colors.qualitative.Set2
 
-# Callback para actualizar los dropdowns de ubicación
+'''
+dpto-cconna-dropdown: Departamentos
+prov-cconna-dropdown: Provincias
+dist-cconna-dropdown: Distritos
+tipo-cconna-dropdown: Tipos de CCONNA
+creacion-cconna-dropdown: Estado de creación de CCONNA
+vigencia-cconna-dropdown: Estado de vigencia de CCONNA
+'''
+
+# Código para cargar los departamentos
 @app.callback(
-    [Output('region-cconna-dropdown', 'options'),
-     Output('provincia-cconna-dropdown', 'options'),
-     Output('distrito-cconna-dropdown', 'options')],
-    [Input('region-cconna-dropdown', 'value'),
-     Input('provincia-cconna-dropdown', 'value')]
+    Output('dpto-cconna-dropdown', 'options'),
+    Input('dpto-cconna-dropdown', 'search_value')
 )
-def update_location_dropdowns(region, provincia):
-    query = 'SELECT DISTINCT "Región", "Provincia", "Distrito" FROM cconna'
+def load_dptos(search_value):
+    query = 'SELECT DISTINCT "dpto" FROM dna ORDER BY "dpto"'
     df = run_query(query)
-    
-    regiones = [{'label': r, 'value': r} for r in sorted(df['Región'].unique())]
-    
-    if region:
-        provincias = [{'label': p, 'value': p} for p in sorted(df[df['Región'] == region]['Provincia'].unique())]
-    else:
-        provincias = []
-    
-    if provincia:
-        distritos = [{'label': d, 'value': d} for d in sorted(df[(df['Región'] == region) & (df['Provincia'] == provincia)]['Distrito'].unique())]
-    else:
-        distritos = []
-    
-    return regiones, provincias, distritos
+    return [{'label': i, 'value': i} for i in df['dpto']]
 
-# Callback para actualizar los dropdowns de tipo y estado
+# Código para cargar las provincias según el departamento seleccionado
 @app.callback(
-    [Output('tipo-cconna-dropdown', 'options'),
-     Output('estado-cconna-dropdown', 'options')],
-    [Input('region-cconna-dropdown', 'value'),
-     Input('provincia-cconna-dropdown', 'value'),
-     Input('distrito-cconna-dropdown', 'value')]
+    Output('prov-cconna-dropdown', 'options'),
+    Input('dpto-cconna-dropdown', 'value')
 )
-def update_type_state_dropdowns(region, provincia, distrito):
-    query = 'SELECT DISTINCT "Tipo de CCONNA ", "ESTADO" FROM cconna'
-    conditions = []
-    params = {}
-    if region:
-        conditions.append('"Región" = :region')
-        params['region'] = region
-    if provincia:
-        conditions.append('"Provincia" = :provincia')
-        params['provincia'] = provincia
-    if distrito:
-        conditions.append('"Distrito" = :distrito')
-        params['distrito'] = distrito
-    
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-    
-    df = run_query(query, params)
-    
-    tipos = [{'label': t, 'value': t} for t in sorted(df['Tipo de CCONNA '].unique())]
-    estados = [{'label': e, 'value': e} for e in sorted(df['ESTADO'].unique())]
-    
-    return tipos, estados
+def set_provincias_options(selected_dpto):
+    if selected_dpto:
+        query = 'SELECT DISTINCT "prov" FROM dna WHERE "dpto" = :dpto ORDER BY "prov"'
+        df = run_query(query, {'dpto': selected_dpto})
+        return [{'label': i, 'value': i} for i in df['prov']]
+    return []
 
-# Callback para actualizar los gráficos
+# Código para cargar los distritos según la provincia seleccionada
 @app.callback(
-    [Output('cconna-por-region', 'figure'),
-     Output('cconna-por-tipo', 'figure'),
-     Output('cconna-por-estado', 'figure'),
-     Output('cconna-timeline', 'figure')],
-    [Input('region-cconna-dropdown', 'value'),
-     Input('provincia-cconna-dropdown', 'value'),
-     Input('distrito-cconna-dropdown', 'value'),
-     Input('tipo-cconna-dropdown', 'value'),
-     Input('estado-cconna-dropdown', 'value')]
+    Output('dist-cconna-dropdown', 'options'),
+    Input('prov-cconna-dropdown', 'value'),
+    State('dpto-cconna-dropdown', 'value')
 )
-def update_graphs(region, provincia, distrito, tipo, estado):
-    query = 'SELECT * FROM cconna'
-    conditions = []
-    params = {}
-    if region:
-        conditions.append('"Región" = :region')
-        params['region'] = region
-    if provincia:
-        conditions.append('"Provincia" = :provincia')
-        params['provincia'] = provincia
-    if distrito:
-        conditions.append('"Distrito" = :distrito')
-        params['distrito'] = distrito
-    if tipo:
-        conditions.append('"Tipo de CCONNA " = :tipo')
-        params['tipo'] = tipo
-    if estado:
-        conditions.append('"ESTADO" = :estado')
-        params['estado'] = estado
-    
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-    
-    df = run_query(query, params)
-    
-    # Gráfico por región
-    region_counts = df['Región'].value_counts().reset_index()
-    region_counts.columns = ['Región', 'Cantidad']
-    fig_region = px.bar(region_counts, x='Región', y='Cantidad', 
-                        title='CCONNAs por Región',
-                        color_discrete_sequence=colores_seaborn)
-    
-    # Gráfico por tipo
-    fig_tipo = px.pie(df, names='Tipo de CCONNA ', title='Distribución por Tipo de CCONNA',
-                      color_discrete_sequence=colores_seaborn)
-    
-    # Gráfico por estado
-    fig_estado = px.pie(df, names='ESTADO', title='Distribución por Estado',
-                        color_discrete_sequence=colores_seaborn)
-    
-    # Timeline
-    def parse_date(date_str):
-        if pd.isna(date_str):
-            return pd.NaT
-        try:
-            return pd.to_datetime(date_str, format='%Y')
-        except ValueError:
-            try:
-                return pd.to_datetime(date_str, format='%Y-%m-%d')
-            except ValueError:
+def set_distritos_options(selected_prov, selected_dpto):
+    if selected_prov and selected_dpto:
+        query = 'SELECT DISTINCT "dist" FROM dna WHERE "dpto" = :dpto AND "prov" = :prov ORDER BY "dist"'
+        df = run_query(query, {'dpto': selected_dpto, 'prov': selected_prov})
+        return [{'label': i, 'value': i} for i in df['dist']]
+    return []
+
+# Callback para cargar los tipos de CCONNA
+@app.callback(
+    Output('tipo-cconna-dropdown', 'options'),
+    Input('tipo-cconna-dropdown', 'search_value')
+)
+def load_tipo_cconna(search_value):
+    query = 'SELECT DISTINCT "Tipo de CCONNA " AS tipo_cconna FROM cconna ORDER BY "Tipo de CCONNA "'
+    df = run_query(query)
+    return [{'label': i, 'value': i} for i in df['tipo_cconna']]
+
+# Callback para el dropdown de creación del CCONNA
+@app.callback(
+    Output('creacion-cconna-dropdown', 'options'),
+    Input('creacion-cconna-dropdown', 'search_value')
+)
+def load_creacion_cconna(search_value):
+    query = """
+        SELECT DISTINCT 
+            CASE 
+                WHEN "Fecha de la Ordenanza" IS NOT NULL THEN 'Creada' 
+                ELSE 'No creada' 
+            END AS estado_creacion
+        FROM cconna
+        ORDER BY estado_creacion
+    """
+    df = run_query(query)
+    estados = df['estado_creacion'].unique()
+    options = [{'label': estado, 'value': estado} for estado in estados]
+    return options
+
+# Callback para el dropdown de vigencia del CCONNA
+@app.callback(
+    Output('vigencia-cconna-dropdown', 'options'),
+    Input('creacion-cconna-dropdown', 'value')
+)
+def set_vigencia_cconna(creacion_selected):
+    if creacion_selected == 'Creada':
+        query = """
+            SELECT "Fecha de inicio del CCONNA", "Fecha de termino del CCONNA"
+            FROM cconna
+            WHERE "Fecha de la Ordenanza" IS NOT NULL
+        """
+        df = run_query(query)
+
+        def parse_date(date_str):
+            if pd.isnull(date_str) or date_str.strip() == '':
+                return pd.NaT
+            for fmt in ('%d/%m/%Y', '%Y', '%Y-%m-%d', '%d-%m-%Y'):
                 try:
-                    return pd.to_datetime(date_str, format='%d/%m/%Y')
-                except ValueError:
-                    return pd.NaT
+                    return pd.to_datetime(date_str, format=fmt, dayfirst=True)
+                except (ValueError, TypeError):
+                    continue
+            return pd.to_datetime(date_str, errors='coerce')
 
-    df['Fecha de inicio del CCONNA'] = df['Fecha de inicio del CCONNA'].apply(parse_date)
-    
-    # Filtrar fechas válidas
-    df_timeline = df[df['Fecha de inicio del CCONNA'].notna()]
-    
-    fig_timeline = px.scatter(df_timeline, x='Fecha de inicio del CCONNA', y='Región', 
-                              title='Timeline de Creación de CCONNAs',
-                              labels={'Fecha de inicio del CCONNA': 'Fecha de Inicio'},
-                              color='Tipo de CCONNA ', color_discrete_sequence=colores_seaborn)
-    
-    return fig_region, fig_tipo, fig_estado, fig_timeline
+        df['fecha_inicio'] = df['Fecha de inicio del CCONNA'].apply(parse_date)
+        df['fecha_termino'] = df['Fecha de termino del CCONNA'].apply(parse_date)
 
-# Callback para actualizar la tabla de datos
-@app.callback(
-    Output('tabla-cconna', 'data'),
-    [Input('region-cconna-dropdown', 'value'),
-     Input('provincia-cconna-dropdown', 'value'),
-     Input('distrito-cconna-dropdown', 'value'),
-     Input('tipo-cconna-dropdown', 'value'),
-     Input('estado-cconna-dropdown', 'value'),
-     Input('tabla-cconna', 'page_current'),
-     Input('tabla-cconna', 'page_size')]
-)
-def update_table(region, provincia, distrito, tipo, estado, page_current, page_size):
-    query = "SELECT * FROM cconna"
-    conditions = []
-    params = {}
-    if region:
-        conditions.append("Región = :region")
-        params['region'] = region
-    if provincia:
-        conditions.append("Provincia = :provincia")
-        params['provincia'] = provincia
-    if distrito:
-        conditions.append("Distrito = :distrito")
-        params['distrito'] = distrito
-    if tipo:
-        conditions.append("`Tipo de CCONNA` = :tipo")
-        params['tipo'] = tipo
-    if estado:
-        conditions.append("ESTADO = :estado")
-        params['estado'] = estado
-    
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-    
-    query += f" LIMIT {page_size} OFFSET {page_current * page_size}"
-    
-    df = run_query(query, params)
-    
-    return df.to_dict('records')
+        today = pd.to_datetime(datetime.today().date())
 
-# Callback para la búsqueda de CCONNA específico
-@app.callback(
-    Output('cconna-results', 'children'),
-    [Input('buscar-cconna-btn', 'n_clicks')],
-    [State('cconna-input', 'value')]
-)
-def search_cconna(n_clicks, search_value):
-    if n_clicks is None or not search_value:
-        return html.Div()
-    
-    query = "SELECT * FROM cconna WHERE REGISTRO = :search_value OR `Nombre del CCONNA` LIKE :search_pattern"
-    params = {'search_value': search_value, 'search_pattern': f'%{search_value}%'}
-    df = run_query(query, params)
-    
-    if df.empty:
-        return html.Div("No se encontraron resultados.", className='text-danger')
-    
-    result = df.iloc[0]
-    return html.Div([
-        html.H3(f"CCONNA: {result['Nombre del CCONNA']}"),
-        html.P(f"Registro: {result['REGISTRO']}"),
-        html.P(f"Ubicación: {result['Región']}, {result['Provincia']}, {result['Distrito']}"),
-        html.P(f"Tipo de CCONNA: {result['Tipo de CCONNA']}"),
-        html.P(f"Fecha de inicio: {result['Fecha de inicio del CCONNA']}"),
-        html.P(f"Fecha de término: {result['Fecha de termino del CCONNA']}"),
-        html.P(f"Estado: {result['ESTADO']}"),
-        html.P(f"Área encargada: {result['Área encargada (Gerencia, Jefatura, Oficina o servicio) del CC']}"),
-        html.P(f"Especialista encargado: {result['Nombres del Especialista encargado del CCONNA']} {result['Apellidos del Especialista encargado del CCONNA']}"),
-        html.P(f"Contacto del especialista: {result['Correo Electrónico del Especialista encargado del CCONNA']}, Tel: {result['Teléfono del Especialista encargado del CCONNA']}")
-    ])
+        def determine_vigencia(row):
+            if pd.isnull(row['fecha_inicio']):
+                return 'No Vigente'
+            elif pd.isnull(row['fecha_termino']):
+                if row['fecha_inicio'] <= today:
+                    return 'Vigente'
+                else:
+                    return 'No Vigente'
+            else:
+                if row['fecha_inicio'] <= today <= row['fecha_termino']:
+                    return 'Vigente'
+                else:
+                    return 'No Vigente'
+
+        df['estado_vigencia'] = df.apply(determine_vigencia, axis=1)
+
+        # Asegurarse de que ambas opciones aparezcan en el dropdown
+        options = [{'label': 'Vigente', 'value': 'Vigente'},
+                   {'label': 'No Vigente', 'value': 'No Vigente'}]
+        return options
+    else:
+        return []
