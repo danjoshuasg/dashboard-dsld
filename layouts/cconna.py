@@ -57,7 +57,15 @@ def get_layout():
                                 multi=True,
                                 className='mb-2'
                             ),
-                        ], md=6),
+                        ], md=4),
+                        dbc.Col([
+                            html.Label('Documento de Creación:', className='fw-bold'),
+                            dcc.Dropdown(
+                                id='documento-cconna-dropdown',
+                                multi=True,
+                                className='mb-2'
+                            ),
+                        ], md=4),
                         dbc.Col([
                             html.Label('Vigencia del CCONNA:', className='fw-bold'),
                             dcc.Dropdown(
@@ -65,17 +73,17 @@ def get_layout():
                                 multi=True,
                                 className='mb-2'
                             ),
-                        ], md=6),
+                        ], md=4),
                     ], className='mb-3'),
                     
                     # Gráficos
                     dbc.Row([
-                        dbc.Col(dcc.Graph(id='histograma-cconna'), width=12, className='mb-3'),
+                        dbc.Col(dcc.Graph(id='cconna-por-ubicacion'), width=12, className='mb-3'),
                     ]),
                     dbc.Row([
-                        dbc.Col(dcc.Graph(id='pie-cconna-tipo'), md=4, className='mb-3'),
-                        dbc.Col(dcc.Graph(id='pie-cconna-creacion'), md=4, className='mb-3'),
-                        dbc.Col(dcc.Graph(id='pie-cconna-vigencia'), md=4, className='mb-3'),
+                        dbc.Col(dcc.Graph(id='cconna-por-tipo'), md=4, className='mb-3'),
+                        dbc.Col(dcc.Graph(id='cconna-por-creacion'), md=4, className='mb-3'),
+                        dbc.Col(dcc.Graph(id='cconna-por-vigencia'), md=4, className='mb-3'),
                     ]),
                 ])
             ], className='mb-4 shadow'),
@@ -84,29 +92,49 @@ def get_layout():
             dbc.Card([
                 dbc.CardBody([
                     html.H2('Desglose de CCONNA Filtrados', className='card-title mb-3'),
-                    dash_table.DataTable(
-                        id='tabla-cconna',
-                        columns=[
-                            {"name": "N° REGISTRO", "id": "registro"},
-                            {"name": "Ubigeo", "id": "ubigeo"},
-                            {"name": "Región", "id": "region"},
-                            {"name": "Provincia", "id": "provincia"},
-                            {"name": "Distrito", "id": "distrito"},
-                            {"name": "Tipo de CCONNA", "id": "tipo_cconna"},
-                            {"name": "Nombre del CCONNA", "id": "nombre_cconna"},
-                            {"name": "Estado de Creación", "id": "estado_creacion"},
-                            {"name": "Vigencia", "id": "vigencia"},
-                        ],
-                        page_current=0,
-                        page_size=10,
-                        page_action='custom',
-                        style_table={'overflowX': 'auto'},
-                        style_cell={
-                            'height': 'auto',
-                            'minWidth': '150px', 'width': '150px', 'maxWidth': '150px',
-                            'whiteSpace': 'normal'
-                        },
-                    ),
+                    html.Div([
+                        dash_table.DataTable(
+                            id='tabla-cconna',
+                            columns=[
+                                {"name": "N° REGISTRO", "id": "registro"},
+                                {"name": "Ubigeo", "id": "ubigeo"},
+                                {"name": "Región", "id": "region"},
+                                {"name": "Provincia", "id": "provincia"},
+                                {"name": "Distrito", "id": "distrito"},
+                                {"name": "Tipo de CCONNA", "id": "tipo_cconna"},
+                                {"name": "Nombre del CCONNA", "id": "nombre_cconna"},
+                                {"name": "Estado de Creación", "id": "estado_creacion"},
+                                {"name": "Vigencia", "id": "vigencia"},
+                            ],
+                            page_current=0,
+                            page_size=10,
+                            page_action='custom',
+                            style_table={'overflowX': 'auto'},
+                            style_cell={
+                                'height': 'auto',
+                                'minWidth': '100px', 'width': '150px', 'maxWidth': '180px',
+                                'whiteSpace': 'normal',
+                                'textOverflow': 'ellipsis',
+                                'overflow': 'hidden'
+                            },
+                            style_header={
+                                'backgroundColor': 'rgb(230, 230, 230)',
+                                'fontWeight': 'bold'
+                            },
+                            style_data_conditional=[
+                                {
+                                    'if': {'row_index': 'odd'},
+                                    'backgroundColor': 'rgb(248, 248, 248)'
+                                }
+                            ],
+                            css=[{
+                                'selector': '.dash-table-tooltip',
+                                'rule': 'background-color: white; font-family: monospace; max-width: 500px !important;'
+                            }],
+                            tooltip_delay=0,
+                            tooltip_duration=None
+                        ),
+                    ], style={'overflowX': 'auto'}),
                     dbc.Pagination(id='pagination-cconna', max_value=10, fully_expanded=False, className='mt-3'),
                 ])
             ], className='mb-4 shadow'),
