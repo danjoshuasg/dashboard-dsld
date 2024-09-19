@@ -1,4 +1,4 @@
-from dash import Input, Output, State, dash_table, html
+from dash import Input, Output, State, callback_context, dash_table, html
 import plotly.express as px
 import pandas as pd
 import dash_bootstrap_components as dbc
@@ -16,7 +16,7 @@ prov-cconna-dropdown: Provincias
 dist-cconna-dropdown: Distritos
 tipo-cconna-dropdown: Tipos de CCONNA
 creacion-cconna-dropdown: Estado de creación de CCONNA
-vigencia-cconna-dropdown: Estado de vigencia de CCONNA
+operativa-cconna-dropdown: Estado de vigencia de CCONNA
 '''
 
 # Código para cargar los departamentos
@@ -44,6 +44,7 @@ def load_dptos(search_value):
         else:
             options.append({'label': row['nombre'], 'value': row['ubigeo']})
     return options
+
 
 # Código para cargar las provincias según el departamento seleccionado
 @app.callback(
@@ -105,7 +106,22 @@ def set_distritos_options(selected_prov_code):
         return options
     return []
 
-
+# Función para obtener el nombre a partir del código UBIGEO
+def get_nombre_from_ubigeo(ubigeo_code):
+    if not ubigeo_code:
+        return None
+    if ubigeo_code == '150000':
+        return 'Lima Metropolitana'
+    elif ubigeo_code == '260000':
+        return 'Lima Provincia'
+    else:
+        query = 'SELECT "nombre" FROM ubigeo WHERE "ubigeo" = :ubigeo_code'
+        df = run_query(query, {'ubigeo_code': ubigeo_code})
+        if not df.empty:
+            return df.iloc[0]['nombre']
+        else:
+            return None
+            
 # Callback para cargar los tipos de CCONNA
 @app.callback(
     Output('tipo-cconna-dropdown', 'options'),
@@ -114,29 +130,10 @@ def set_distritos_options(selected_prov_code):
      Input('dist-cconna-dropdown', 'value')]
 )
 def load_tipo_cconna(selected_dpto_code, selected_prov_code, selected_dist_code):
-    # Función para obtener el nombre a partir del código UBIGEO
-    def get_nombre_from_ubigeo(ubigeo_code):
-        if not ubigeo_code:
-            return None
-        if ubigeo_code == '150000':
-            return 'Lima Metropolitana'
-        elif ubigeo_code == '260000':
-            return 'Lima Provincia'
-        else:
-            query = 'SELECT "nombre" FROM ubigeo WHERE "ubigeo" = :ubigeo_code'
-            df = run_query(query, {'ubigeo_code': ubigeo_code})
-            if not df.empty:
-                return df.iloc[0]['nombre']
-            else:
-                return None
-
     # Obtener los nombres correspondientes a los códigos UBIGEO seleccionados
     dpto_nombre = get_nombre_from_ubigeo(selected_dpto_code)
     prov_nombre = get_nombre_from_ubigeo(selected_prov_code)
     dist_nombre = get_nombre_from_ubigeo(selected_dist_code)
-
-    # Definir los tipos de CCONNA disponibles
-    all_types = ['CCONNA Regional', 'CCONNA Provincial', 'CCONNA Distrital']
 
     # Caso 1: No se ha seleccionado ni departamento, provincia ni distrito
     if not selected_dpto_code and not selected_prov_code and not selected_dist_code:
@@ -155,7 +152,7 @@ def load_tipo_cconna(selected_dpto_code, selected_prov_code, selected_dist_code)
         query = '''
             SELECT DISTINCT "Tipo de CCONNA " AS tipo_cconna
             FROM cconna
-            WHERE "Tipo de CCONNA " IN ('CCONNA Provincial', 'CCONNA Distrital')
+            WHERE "Tipo de CCONNA " IN ('CCONNA Regional', 'CCONNA Provincial', 'CCONNA Distrital')
             AND "Región" = :dpto
             ORDER BY "Tipo de CCONNA "
         '''
@@ -167,7 +164,7 @@ def load_tipo_cconna(selected_dpto_code, selected_prov_code, selected_dist_code)
         query = '''
             SELECT DISTINCT "Tipo de CCONNA " AS tipo_cconna
             FROM cconna
-            WHERE "Tipo de CCONNA " = 'CCONNA Distrital'
+            WHERE "Tipo de CCONNA " = ('CCONNA Provincial', 'CCONNA Distrital')
             AND "Región" = :dpto
             AND "Provincia" = :prov
             ORDER BY "Tipo de CCONNA "
@@ -200,63 +197,78 @@ def load_tipo_cconna(selected_dpto_code, selected_prov_code, selected_dist_code)
     return options
 
 # Callback para el dropdown de creación del CCONNA
+
+# Callback para cargar las opciones iniciales de todos los dropdowns
 @app.callback(
-    Output('creacion-cconna-dropdown', 'options'),
-    Input('creacion-cconna-dropdown', 'search_value')
+    [Output('registro-cconna-dropdown', 'options'),
+     Output('creacion-cconna-dropdown', 'options'),
+     Output('operativa-cconna-dropdown', 'options')],
+    Input('url', 'pathname')  # Este input se usa solo para activar el callback al cargar la página
 )
-def load_creacion_cconna(search_value):
-    query = """
-        SELECT 
-            CASE 
-                WHEN COALESCE(
-                    "¿Cuenta con Acta de Conformación o Acta de Elección? SI/NO",
-                    "¿Cuenta con Ordenanza que crea el CCONNA? SI/NO",
-                    "¿Cuenta con Resolución de conformación de integrantes del CC"
-                ) IS NOT NULL THEN 'Creada' 
-                ELSE 'No creada' 
-            END AS estado_creacion
-        FROM cconna
-        GROUP BY estado_creacion
-        ORDER BY estado_creacion
-    """
-    df = run_query(query)
-    estados = df['estado_creacion'].unique()
-    options = [{'label': estado, 'value': estado} for estado in estados]
-    return options
+def load_initial_options(_):
+    registro_options = [
+        {'label': 'No Registrada', 'value': 'no_registrada'},
+        {'label': 'Registrada', 'value': 'registrada'}
+    ]
+    creacion_options = [
+        {'label': 'No Creada', 'value': 'no_creada'},
+        {'label': 'Creada', 'value': 'creada'}
+    ]
+    operativa_options = [
+        {'label': 'No Operativa', 'value': 'no_operativa'},
+        {'label': 'Operativa', 'value': 'operativa'}
+    ]
+    return registro_options, creacion_options, operativa_options
 
-
-# Callback para el dropdown de documento del CCONNA
+# Callback para manejar la habilitación/deshabilitación y valores de los dropdowns
 @app.callback(
-    Output('documento-cconna-dropdown', 'options'),
-    Input('documento-cconna-dropdown', 'search_value')
+    [Output('registro-cconna-dropdown', 'value'),
+     Output('creacion-cconna-dropdown', 'value'),
+     Output('creacion-cconna-dropdown', 'disabled'),
+     Output('operativa-cconna-dropdown', 'value'),
+     Output('operativa-cconna-dropdown', 'disabled')],
+    [Input('registro-cconna-dropdown', 'value'),
+     Input('creacion-cconna-dropdown', 'value')]
 )
-def load_documento_cconna(search_value):
-    query = """
-        SELECT DISTINCT
-            CASE
-                WHEN "¿Cuenta con Acta de Conformación o Acta de Elección? SI/NO" IS NOT NULL THEN 'Acta de Conformación/Elección'
-                WHEN "¿Cuenta con Ordenanza que crea el CCONNA? SI/NO" IS NOT NULL THEN 'Ordenanza de creación'
-                WHEN "¿Cuenta con Resolución de conformación de integrantes del CC" IS NOT NULL THEN 'Resolución de Conformación'
-                ELSE 'Sin Documento'
-            END AS tipo_documento
-        FROM cconna
-        WHERE "¿Cuenta con Acta de Conformación o Acta de Elección? SI/NO" IS NOT NULL
-           OR "¿Cuenta con Ordenanza que crea el CCONNA? SI/NO" IS NOT NULL
-           OR "¿Cuenta con Resolución de conformación de integrantes del CC" IS NOT NULL
-        ORDER BY tipo_documento
-    """
-    df = run_query(query)
-    documentos = df['tipo_documento'].unique()
-    options = [{'label': doc, 'value': doc} for doc in documentos]
-    return options
+def update_dropdown_states(registro_value, creacion_value):
+    ctx = callback_context
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0] if ctx.triggered else None
 
+    if triggered_id == 'registro-cconna-dropdown' or registro_value is None:
+        if registro_value == 'registrada':
+            creacion_value = 'no_creada'
+            creacion_disabled = False
+        else:
+            creacion_value = None
+            creacion_disabled = True
+        operativa_value = None
+        operativa_disabled = True
+    
+    elif triggered_id == 'creacion-cconna-dropdown':
+        creacion_disabled = False
+        if creacion_value == 'creada':
+            operativa_value = 'no_operativa'
+            operativa_disabled = False
+        else:
+            operativa_value = None
+            operativa_disabled = True
+    
+    else:
+        # Estado inicial o inesperado
+        registro_value = 'no_registrada'
+        creacion_value = None
+        creacion_disabled = True
+        operativa_value = None
+        operativa_disabled = True
 
-# Callback para el dropdown de vigencia del CCONNA
+    return registro_value, creacion_value, creacion_disabled, operativa_value, operativa_disabled
+'''
+# Callback para el dropdown de Estado Operativo del CCONNA
 @app.callback(
-    Output('vigencia-cconna-dropdown', 'options'),
+    Output('operativa-cconna-dropdown', 'options'),
     Input('creacion-cconna-dropdown', 'value')
 )
-def set_vigencia_cconna(creacion_selected):
+def set_operativa_cconna(creacion_selected):
     if creacion_selected == ['Creada']:
         query = """
             SELECT "Fecha de inicio del CCONNA", "Fecha de termino del CCONNA"
@@ -303,19 +315,19 @@ def set_vigencia_cconna(creacion_selected):
         options = []
     return options
 
-
+'''
 
 @app.callback(
     [Output('cconna-por-ubicacion', 'figure'),        
      Output('cconna-por-tipo', 'figure'),
      Output('cconna-por-creacion', 'figure'),
-     Output('cconna-por-vigencia', 'figure')],
+     Output('cconna-por-operativa', 'figure')],
     [Input('dpto-cconna-dropdown', 'value'),
      Input('prov-cconna-dropdown', 'value'),
      Input('dist-cconna-dropdown', 'value'),
      Input('tipo-cconna-dropdown', 'value'),
      Input('creacion-cconna-dropdown', 'value'),
-     Input('vigencia-cconna-dropdown', 'value')]
+     Input('operativa-cconna-dropdown', 'value')]
 )
 def update_graphs(dpto_code, prov_code, dist_code, tipo, creacion, vigencia):
     # Función para obtener el nombre a partir del código UBIGEO
@@ -385,6 +397,7 @@ def update_graphs(dpto_code, prov_code, dist_code, tipo, creacion, vigencia):
 
     # Ejecutar la consulta
     df = run_query(query, params)
+    
 
     # Procesar el estado de vigencia
     def parse_date(date_str):
@@ -435,32 +448,65 @@ def update_graphs(dpto_code, prov_code, dist_code, tipo, creacion, vigencia):
 
     # Figura 1: Histograma según la ubicación
     if dist_nombre:
+        rotulo = f'del Distrito {dist_nombre}, en la Provincia {prov_nombre}, Región {dpto_nombre}'
         ubicacion_field = 'Distrito'
     elif prov_nombre:
-        ubicacion_field = 'Distrito'  # Mostrar a nivel de distrito si se selecciona provincia
+         rotulo= f'de la Provincia {prov_nombre}, Región {dpto_nombre}'  # Mostrar a nivel de distrito si se selecciona provincia
+         ubicacion_field = 'Provincia'
     elif dpto_nombre:
-        ubicacion_field = 'Provincia'  # Mostrar a nivel de provincia si se selecciona departamento
+         rotulo = f'de la Región {dpto_nombre}'  # Mostrar a nivel de provincia si se selecciona departamento
+         ubicacion_field='Región'
     else:
-        ubicacion_field = 'Región'
+         rotulo = 'a nivel Nacional'
+         ubicacion_field='Región'
 
     count_df = df[ubicacion_field].value_counts().reset_index()
     count_df.columns = [ubicacion_field, 'Cantidad']
-    fig_ubicacion = px.bar(count_df, x=ubicacion_field, y='Cantidad', title=f'CCONNA por {ubicacion_field}')
+    total = count_df['Cantidad'].sum()
+    fig_ubicacion = px.bar(count_df, 
+                           x=ubicacion_field, 
+                           y='Cantidad', 
+                           title=f'Número de CCONNA {rotulo}: {total}',
+                           color_discrete_sequence=colores_seaborn)
 
     # Figura 2: Pie chart según el tipo de CCONNA
     tipo_counts = df['Tipo de CCONNA '].value_counts().reset_index()
     tipo_counts.columns = ['Tipo de CCONNA', 'Cantidad']
-    fig_tipo = px.pie(tipo_counts, names='Tipo de CCONNA', values='Cantidad', title='Distribución por Tipo de CCONNA')
+    fig_tipo = px.pie(tipo_counts, 
+                      names='Tipo de CCONNA', 
+                      values='Cantidad', 
+                      title='Distribución por Tipo de CCONNA',
+                      color_discrete_sequence=colores_seaborn)
 
     # Figura 3: Pie chart según el estado de creación
     df['estado_creacion'] = df['Fecha de la Ordenanza'].apply(lambda x: 'Creada' if pd.notnull(x) else 'No creada')
     creacion_counts = df['estado_creacion'].value_counts().reset_index()
     creacion_counts.columns = ['Estado de Creación', 'Cantidad']
-    fig_creacion = px.pie(creacion_counts, names='Estado de Creación', values='Cantidad', title='Distribución por Estado de Creación')
+    fig_creacion = px.pie(creacion_counts, 
+                          names='Estado de Creación', 
+                          values='Cantidad', 
+                          title='Distribución por Estado de Creación',
+                          color_discrete_sequence=colores_seaborn)
 
     # Figura 4: Pie chart según el estado de vigencia
     vigencia_counts = df['estado_vigencia'].value_counts().reset_index()
     vigencia_counts.columns = ['Estado de Vigencia', 'Cantidad']
-    fig_vigencia = px.pie(vigencia_counts, names='Estado de Vigencia', values='Cantidad', title='Distribución por Estado de Vigencia')
+    fig_vigencia = px.pie(vigencia_counts, 
+                          names='Estado de Vigencia', 
+                          values='Cantidad', 
+                          title='Distribución por Estado de Vigencia',
+                          color_discrete_sequence=colores_seaborn)
+    
+        # Personalización adicional para mejorar la apariencia
+    for fig in [fig_ubicacion, fig_tipo, fig_creacion, fig_vigencia]:
+        fig.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font=dict(family="Arial", size=12),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+    # Para el gráfico de barras, añadimos algunas personalizaciones específicas
+    fig_ubicacion.update_xaxes(tickangle=-45)
+    fig_ubicacion.update_yaxes(gridcolor='lightgray')
 
     return fig_ubicacion, fig_tipo, fig_creacion, fig_vigencia

@@ -29,7 +29,7 @@ def get_layout():
             # Filtros de Búsqueda
             dbc.Card([
                 dbc.CardBody([
-                    html.H2('Filtros de Búsqueda', className='card-title mb-3'),
+                    html.H2('Búsqueda por ubigeo', className='card-title mb-3'),
                     dbc.Row([
                         dbc.Col([
                             html.Label('Departamento:', className='fw-bold'),
@@ -48,33 +48,45 @@ def get_layout():
                             dcc.Dropdown(id='tipo-cconna-dropdown', multi=True, className='mb-2'),
                         ], md=3),
                     ], className='mb-3'),
-                    
+
+                    html.H2('Búsqueda por estado de CCONNA', className='card-title mb-3'),
                     dbc.Row([
-                        dbc.Col([
-                            html.Label('Estado de Creación:', className='fw-bold'),
-                            dcc.Dropdown(
-                                id='creacion-cconna-dropdown',
-                                multi=True,
-                                className='mb-2'
-                            ),
-                        ], md=4),
-                        dbc.Col([
-                            html.Label('Documento de Creación:', className='fw-bold'),
-                            dcc.Dropdown(
-                                id='documento-cconna-dropdown',
-                                multi=True,
-                                className='mb-2'
-                            ),
-                        ], md=4),
-                        dbc.Col([
-                            html.Label('Vigencia del CCONNA:', className='fw-bold'),
-                            dcc.Dropdown(
-                                id='vigencia-cconna-dropdown',
-                                multi=True,
-                                className='mb-2'
-                            ),
-                        ], md=4),
+                            dbc.Col([
+                                html.Label('Estado de Registro:', className='fw-bold'),
+                                dcc.Dropdown(
+                                    id='registro-cconna-dropdown',
+                                    className='mb-2'
+                                ),
+                            ], md=4),
+                            dbc.Col([
+                                html.Label('Estado de Creación:', className='fw-bold'),
+                                dcc.Dropdown(
+                                    id='creacion-cconna-dropdown',
+                                    className='mb-2'
+                                ),
+                            ], md=4),
+                            dbc.Col([
+                                html.Label('Estado de Operativa:', className='fw-bold'),
+                                dcc.Dropdown(
+                                    id='operativa-cconna-dropdown',
+                                    className='mb-2'
+                                ),
+                            ], md=4),
                     ], className='mb-3'),
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H5("Sobre los filtros de estado", className="card-title"),
+                            html.P([
+                                "Los filtros de estado del CCONNA funcionan de la siguiente manera:",
+                                html.Ul([
+                                    html.Li("Registro: Indica si el CCONNA está registrado en la base de datos de la DSLD"),
+                                    html.Li("Creación: Muestra si el CCONNA ha sido oficialmente creado, lo que implica tener documentos registrados y actualizados."),
+                                    html.Li("Operativa: Señala si el CCONNA está actualmente en funcionamiento dentro de las fechas de inicio y fin establecidas.")
+                                ]),
+                                "Estos filtros son interdependientes: un CCONNA debe estar 'Registrado' para poder estar 'Creado', y debe estar 'Creado' para poder estar 'Operativo'."
+                            ])
+                        ])
+                    ], className="mb-3"),
                     
                     # Gráficos
                     dbc.Row([
@@ -83,7 +95,7 @@ def get_layout():
                     dbc.Row([
                         dbc.Col(dcc.Graph(id='cconna-por-tipo'), md=4, className='mb-3'),
                         dbc.Col(dcc.Graph(id='cconna-por-creacion'), md=4, className='mb-3'),
-                        dbc.Col(dcc.Graph(id='cconna-por-vigencia'), md=4, className='mb-3'),
+                        dbc.Col(dcc.Graph(id='cconna-por-operativa'), md=4, className='mb-3'),
                     ]),
                 ])
             ], className='mb-4 shadow'),
@@ -96,14 +108,10 @@ def get_layout():
                         dash_table.DataTable(
                             id='tabla-cconna',
                             columns=[
-                                {"name": "N° REGISTRO", "id": "registro"},
                                 {"name": "Ubigeo", "id": "ubigeo"},
-                                {"name": "Región", "id": "region"},
-                                {"name": "Provincia", "id": "provincia"},
-                                {"name": "Distrito", "id": "distrito"},
                                 {"name": "Tipo de CCONNA", "id": "tipo_cconna"},
                                 {"name": "Nombre del CCONNA", "id": "nombre_cconna"},
-                                {"name": "Estado de Creación", "id": "estado_creacion"},
+                                {"name": "Especialista Encargado", "id": "estado_creacion"},
                                 {"name": "Vigencia", "id": "vigencia"},
                             ],
                             page_current=0,

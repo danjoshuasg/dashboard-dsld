@@ -15,6 +15,25 @@ def load_dptos(search_value):
     query = "SELECT DISTINCT \"dpto\" FROM dna ORDER BY \"dpto\""
     df = run_query(query)
     return [{'label': i, 'value': i} for i in df['dpto']]
+# Callbacks para actualizar los dropdowns
+@app.callback(Output('prov-dna-dropdown', 'options'),
+              Input('dpto-dna-dropdown', 'value'))
+def set_provincias_options(selected_dpto):
+    if selected_dpto:
+        query = "SELECT DISTINCT \"prov\" FROM dna WHERE \"dpto\" = :dpto ORDER BY \"prov\""
+        df = run_query(query, {'dpto': selected_dpto})
+        return [{'label': i, 'value': i} for i in df['prov']]
+    return []
+
+@app.callback(Output('dist-dna-dropdown', 'options'),
+              Input('prov-dna-dropdown', 'value'),
+              State('dpto-dna-dropdown', 'value'))
+def set_distritos_options(selected_prov, selected_dpto):
+    if selected_prov and selected_dpto:
+        query = "SELECT DISTINCT \"dist\" FROM dna WHERE \"dpto\" = :dpto AND \"prov\" = :prov ORDER BY \"dist\""
+        df = run_query(query, {'dpto': selected_dpto, 'prov': selected_prov})
+        return [{'label': i, 'value': i} for i in df['dist']]
+    return []
 
 # Callbacks para estados de DNA
 @app.callback(
@@ -66,25 +85,7 @@ def set_tipo_default(available_options):
     return [option['value'] for option in available_options if option['label'] in default_values]
 
 
-# Callbacks para actualizar los dropdowns
-@app.callback(Output('prov-dna-dropdown', 'options'),
-              Input('dpto-dna-dropdown', 'value'))
-def set_provincias_options(selected_dpto):
-    if selected_dpto:
-        query = "SELECT DISTINCT \"prov\" FROM dna WHERE \"dpto\" = :dpto ORDER BY \"prov\""
-        df = run_query(query, {'dpto': selected_dpto})
-        return [{'label': i, 'value': i} for i in df['prov']]
-    return []
 
-@app.callback(Output('dist-dna-dropdown', 'options'),
-              Input('prov-dna-dropdown', 'value'),
-              State('dpto-dna-dropdown', 'value'))
-def set_distritos_options(selected_prov, selected_dpto):
-    if selected_prov and selected_dpto:
-        query = "SELECT DISTINCT \"dist\" FROM dna WHERE \"dpto\" = :dpto AND \"prov\" = :prov ORDER BY \"dist\""
-        df = run_query(query, {'dpto': selected_dpto, 'prov': selected_prov})
-        return [{'label': i, 'value': i} for i in df['dist']]
-    return []
 
 @app.callback(
     [Output('dna-por-ubicacion', 'figure'),        
